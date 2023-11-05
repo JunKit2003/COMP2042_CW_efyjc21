@@ -53,7 +53,7 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
 
     private double v = 1.000;
 
-    private int  heart    = 3;
+    private int  heart    = 5;
     private int  score    = 0;
     private long time     = 0;
     private long hitTime  = 0;
@@ -360,33 +360,41 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
             //return;
         }
 
-        if (yBall >= yBreak - ballRadius) {
+        if (yBall + ballRadius >= yBreak && yBall - ballRadius <= yBreak + breakHeight) {
             //System.out.println("Colide1");
-            if (xBall >= xBreak && xBall <= xBreak + breakWidth) {
+            if (xBall + ballRadius >= xBreak && xBall - ballRadius <= xBreak + breakWidth) { 
                 hitTime = time;
                 resetColideFlags();
                 colideToBreak = true;
-                goDownBall = false;
-
-                double relation = (xBall - centerBreakX) / (breakWidth / 2);
-
-                if (Math.abs(relation) <= 0.3) {
-                    //vX = 0;
-                    vX = Math.abs(relation);
-                } else if (Math.abs(relation) > 0.3 && Math.abs(relation) <= 0.7) {
-                    vX = (Math.abs(relation) * 1.5) + (level / 3.500);
-                    //System.out.println("vX " + vX);
-                } else {
-                    vX = (Math.abs(relation) * 2) + (level / 3.500);
-                    //System.out.println("vX " + vX);
+                if (yBall + ballRadius == yBreak) {
+                    goDownBall = false;
+                }
+                else if (yBall - ballRadius == yBreak + breakHeight) {
+                    goDownBall = true;
+                }
+                else {
+                    if (xBall - centerBreakX > 0) {
+                        colideToBreakAndMoveToRight = true;
+                    } else {
+                        colideToBreakAndMoveToRight = false;
+                    }
                 }
 
-                if (xBall - centerBreakX > 0) {
-                    colideToBreakAndMoveToRight = true;
-                } else {
-                    colideToBreakAndMoveToRight = false;
-                }
-                //System.out.println("Colide2");
+                // double relation = (xBall - centerBreakX) / (breakWidth / 2);
+
+                // if (Math.abs(relation) <= 0.3) {
+                //     //vX = 0;
+                //     vX = Math.abs(relation);
+                // } else if (Math.abs(relation) > 0.3 && Math.abs(relation) <= 0.7) {
+                //     vX = (Math.abs(relation) * 1.5) + (level / 3.500);
+                //     //System.out.println("vX " + vX);
+                // } else {
+                //     vX = (Math.abs(relation) * 2) + (level / 3.500);
+                //     //System.out.println("vX " + vX);
+                // }
+
+
+                // System.out.println("Colide2");
             }
         }
 
