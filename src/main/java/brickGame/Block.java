@@ -51,7 +51,7 @@ public class Block implements Serializable {
     public static int BLOCK_CHOCO = 100; // Constant for chocolate block type
     public static int BLOCK_STAR = 101; // Constant for star block type
     public static int BLOCK_HEART = 102; // Constant for heart block type
-    // public static int BLOCK_ADDBALL = 103; // Constant for add ball block type
+    public static int BLOCK_SPEED = 103; // Constant for speed block type
 
     // Constructor for the Block class
     public Block(int row, int column, Color color, int type) { // Constructor for Block class, initializes the block with specified properties
@@ -82,6 +82,12 @@ public class Block implements Serializable {
             Image image = new Image("heart.jpg"); // Load heart image
             ImagePattern pattern = new ImagePattern(image); // Create an image pattern
             rect.setFill(pattern); // Set the pattern as the fill for the Rectangle
+
+        } else if (type == BLOCK_SPEED) {
+            Image image = new Image("speed.jpg"); // Load heart image
+            ImagePattern pattern = new ImagePattern(image); // Create an image pattern
+            rect.setFill(pattern); // Set the pattern as the fill for the Rectangle
+
         } else if (type == BLOCK_STAR) {
             Image image = new Image("star.jpg"); // Load star image
             ImagePattern pattern = new ImagePattern(image); // Create an image pattern
@@ -101,6 +107,31 @@ public class Block implements Serializable {
     if (isDestroyed) {
         return NO_HIT; // Return NO_HIT if there is no collision
     }
+
+       // Check collision with the bottom-right corner
+       if (xBall - ballRadius <= x + width && xBall + ballRadius > x + width
+               && yBall - ballRadius <= y + height && yBall + ballRadius > y + height) {
+           return HIT_BOTTOM_RIGHT; // Return the direction of the hit (bottom-right)
+       }
+
+       // Check collision with the bottom-left corner
+       if (xBall + ballRadius >= x && xBall - ballRadius < x
+               && yBall - ballRadius <= y + height && yBall + ballRadius > y + height) {
+           return HIT_BOTTOM_LEFT; // Return the direction of the hit (bottom-left)
+       }
+
+       // Check collision with the top-right corner
+       if (xBall - ballRadius <= x + width && xBall + ballRadius > x + width
+               && yBall + ballRadius >= y && yBall - ballRadius < y) {
+           return HIT_TOP_RIGHT; // Return the direction of the hit (top-right)
+       }
+
+       // Check collision with the top-left corner
+       if (xBall + ballRadius >= x && xBall - ballRadius < x
+               && yBall + ballRadius >= y && yBall - ballRadius < y) {
+           return HIT_TOP_LEFT; // Return the direction of the hit (top-left)
+       }
+
 
     // Check collision with the bottom of the block
     if (xBall >= x && xBall <= x + width && yBall - ballRadius <= y + height && yBall + ballRadius > y + height) {
@@ -122,29 +153,6 @@ public class Block implements Serializable {
         return HIT_LEFT; // Return the direction of the hit (left)
     }
 
-     // Check collision with the bottom-right corner
-     if (xBall - ballRadius <= x + width && xBall + ballRadius > x + width 
-     && yBall - ballRadius <= y + height && yBall + ballRadius > y + height) {
-     return HIT_BOTTOM_RIGHT; // Return the direction of the hit (bottom-right)
-    }
-
-    // Check collision with the bottom-left corner
-    if (xBall + ballRadius >= x && xBall - ballRadius < x 
-        && yBall - ballRadius <= y + height && yBall + ballRadius > y + height) {
-        return HIT_BOTTOM_LEFT; // Return the direction of the hit (bottom-left)
-    }
-
-    // Check collision with the top-right corner
-    if (xBall - ballRadius <= x + width && xBall + ballRadius > x + width 
-        && yBall + ballRadius >= y && yBall - ballRadius < y) {
-        return HIT_TOP_RIGHT; // Return the direction of the hit (top-right)
-    }
-
-    // Check collision with the top-left corner
-    if (xBall + ballRadius >= x && xBall - ballRadius < x 
-        && yBall + ballRadius >= y && yBall - ballRadius < y) {
-        return HIT_TOP_LEFT; // Return the direction of the hit (top-left)
-    }
 
 
     return NO_HIT; // Return NO_HIT if there is no collision detected

@@ -45,7 +45,7 @@ public class LoadSave { // Class for handling loading and saving game states
             level = inputStream.readInt();
             score = inputStream.readInt();
             heart = inputStream.readInt();
-            destroyedBlockCount = inputStream.readInt();
+            destroyedBlockCount = 0;
             xBall = inputStream.readDouble();
             yBall = inputStream.readDouble();
             xBreak = inputStream.readDouble();
