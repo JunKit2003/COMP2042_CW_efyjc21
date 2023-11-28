@@ -48,10 +48,11 @@ public class Block implements Serializable {
 
 
     public static int BLOCK_NORMAL = 99; // Constant for normal block type
-    public static int BLOCK_CHOCO = 100; // Constant for chocolate block type
+    public static int BLOCK_QUESTION = 100; // Constant for chocolate block type
     public static int BLOCK_STAR = 101; // Constant for star block type
     public static int BLOCK_HEART = 102; // Constant for heart block type
-    public static int BLOCK_SPEED = 103; // Constant for speed block type
+    public static int BLOCK_GIANT = 103; // Constant for Giant block type
+    public static int BLOCK_MINI = 104; // Constant for Giant block type
 
     // Constructor for the Block class
     public Block(int row, int column, Color color, int type) { // Constructor for Block class, initializes the block with specified properties
@@ -74,28 +75,28 @@ public class Block implements Serializable {
         rect.setY(y); // Set the y-coordinate of the Rectangle
 
         // Conditional logic for setting different fill patterns based on block type
-        if (type == BLOCK_CHOCO) {
-            Image image = new Image("choco.jpg"); // Load choco image
+        if (type == BLOCK_QUESTION) {
+            Image image = new Image("question.png"); // Load choco image
             ImagePattern pattern = new ImagePattern(image); // Create an image pattern
             rect.setFill(pattern); // Set the pattern as the fill for the Rectangle
         } else if (type == BLOCK_HEART) {
-            Image image = new Image("heart.jpg"); // Load heart image
+            Image image = new Image("heart.png"); // Load heart image
             ImagePattern pattern = new ImagePattern(image); // Create an image pattern
             rect.setFill(pattern); // Set the pattern as the fill for the Rectangle
 
-        } else if (type == BLOCK_SPEED) {
-            Image image = new Image("speed.jpg"); // Load heart image
+        } else if (type == BLOCK_GIANT) {
+            Image image = new Image("giant.png"); // Load giant image
             ImagePattern pattern = new ImagePattern(image); // Create an image pattern
             rect.setFill(pattern); // Set the pattern as the fill for the Rectangle
-
+        } else if (type == BLOCK_MINI) {
+            Image image = new Image("mini.png"); // Load mini image
+            ImagePattern pattern = new ImagePattern(image); // Create an image pattern
+            rect.setFill(pattern); // Set the pattern as the fill for the Rectangle
         } else if (type == BLOCK_STAR) {
-            Image image = new Image("star.jpg"); // Load star image
+            Image image = new Image("gold.png"); // Load star image
             ImagePattern pattern = new ImagePattern(image); // Create an image pattern
             rect.setFill(pattern); // Set the pattern as the fill for the Rectangle
-        } // else if (type == BLOCK_STAR) {
-        //     Image image = new Image("addball.png"); // Load addball image
-        //     ImagePattern pattern = new ImagePattern(image); // Create an image pattern
-        //     rect.setFill(pattern); // Set the pattern as the fill for the Rectangle
+        }
         else {
             rect.setFill(color); // Set the color as the fill for the Rectangle if no special type
         }
