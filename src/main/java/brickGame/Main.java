@@ -21,6 +21,11 @@ import java.util.ArrayList;
 import java.util.Random;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
+import javafx.geometry.Pos;
+
+
 
 
 public class Main extends Application implements EventHandler<KeyEvent>, GameEngine.OnAction {
@@ -49,9 +54,13 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
     private boolean isGoldStatus = false;
     private boolean isExistHeartBlock = false;
 
+    private boolean isGameRunning = false;
+
     private boolean isBigBall = false;
 
     private boolean isSmallBall = false;
+
+    private boolean isPaused = false;
 
     private Rectangle rect;
     private int       ballRadius = 20;
@@ -93,11 +102,15 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
     private Label            heartLabel;
     private Label            levelLabel;
 
+    private StackPane       pauseMenu;
+
     private boolean loadFromSave = false;
 
     Stage  primaryStage;
     Button load    = null;
     Button newGame = null;
+    Button exitGame = null;
+
 
     Sound soundPlayer = new Sound();
     @Override
@@ -113,8 +126,9 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
             if (level >1){
                 new Score().showMessage("Level Up :)", this);
             }
-            if (level == 20) {
+            if (level == 5) {
                 new Score().showWin(this);
+                engine.stop();
                 soundPlayer.playSoundEffect("win.mp3", 1.0);
                 return;
             }
@@ -123,13 +137,16 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
             initBreak();
             initBoard();
 
+
             load = new Button("Load Game");
             newGame = new Button("Start New Game");
-            load.setTranslateX(220);
-            load.setTranslateY(300);
-            newGame.setTranslateX(220);
-            newGame.setTranslateY(340);
-
+            exitGame = new Button("Exit Game");
+            load.setTranslateX(240);
+            load.setTranslateY(380);
+            newGame.setTranslateX(240);
+            newGame.setTranslateY(420);
+            exitGame.setTranslateX((240));
+            exitGame.setTranslateY(460);
         }
 
 
@@ -140,7 +157,7 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
         heartLabel = new Label("Heart : " + heart);
         heartLabel.setTranslateX(sceneWidth - 80);
         if (loadFromSave == false) {
-            root.getChildren().addAll(rect, ball, scoreLabel, heartLabel, levelLabel, load, newGame);
+            root.getChildren().addAll(rect, ball, scoreLabel, heartLabel, levelLabel, load, newGame, exitGame);
         } else {
             root.getChildren().addAll(rect, ball, scoreLabel, heartLabel, levelLabel);
         }
@@ -157,36 +174,54 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
         primaryStage.show();
 
         if (loadFromSave == false) {
-            if (level > 1 && level < 20) {
-                load.setVisible(false);
-                newGame.setVisible(false);
+            if (level > 1 && level < 5) {
+                synchronized (lock) {
+                    load.setVisible(false);
+                    newGame.setVisible(false);
+                    exitGame.setVisible(false);
+
+                }
+                isPaused = false ;
                 engine = new GameEngine();
                 engine.setOnAction(this);
                 engine.setFps(120);
                 engine.start();
             }
-            synchronized (lock) {
-                load.setOnAction(event -> {
-                    loadGame();
 
+            load.setOnAction(event -> {
+                loadGame();
+                isGameRunning = true;
+                isPaused = false ;
+                synchronized (lock) {
                     load.setVisible(false);
                     newGame.setVisible(false);
-                });
-            }
+                    exitGame.setVisible(false);
+                }
+            });
 
 
             newGame.setOnAction(event -> {
+                isGameRunning = true;
                 engine = new GameEngine();
                 engine.setOnAction(Main.this);
                 engine.setFps(120);
                 engine.start();
+                isPaused = false ;
 
                 synchronized (lock) {
                     load.setVisible(false);
                     newGame.setVisible(false);
+                    exitGame.setVisible(false);
                 }
+            });
+
+            exitGame.setOnAction(event -> {
+                Platform.exit();
 
             });
+
+
+
         } else {
             engine = new GameEngine();
             engine.setOnAction(this);
@@ -194,7 +229,8 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
             engine.start(time);
             loadFromSave = false;
         }
-
+        setupPauseMenu();
+        ((Pane) scene.getRoot()).getChildren().add(pauseMenu);
 
     }
 
@@ -258,6 +294,10 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
             case S:
                 saveGame();
                 break;
+            case P:
+                togglePause();
+                break;
+
         }
     }
 
@@ -391,7 +431,6 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
                     Platform.runLater(() -> {
                         heartLabel.setText("Heart : " + heart);
                         new Score().showGameOver(this);
-
                         soundPlayer.stopMusic();
                         soundPlayer.playSoundEffect("gameover.mp3", 1.0);
                         ball.setFill(new ImagePattern(new Image("losemario.jpg")));
@@ -509,13 +548,51 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
 
     private void checkDestroyedCount() {
         if (destroyedBlockCount == blocks.size()) {
-            //TODO win level todo...
             System.out.println("Congratuations ! You completed level "+ level);
             Platform.runLater(() -> {
                 nextLevel();
             });
         }
     }
+
+    private void setupPauseMenu() {
+        Button btnResume = new Button("Resume");
+        Button btnExit = new Button("Exit to Main Menu");
+
+        // Set up button actions
+        btnResume.setOnAction(e -> togglePause());
+        btnExit.setOnAction(e -> restartGame());
+
+        VBox menuLayout = new VBox(10, btnResume, btnExit);
+        menuLayout.setAlignment(Pos.CENTER);
+
+        pauseMenu = new StackPane(menuLayout);
+        pauseMenu.setVisible(false); // Initially hidden
+        pauseMenu.setStyle("-fx-background-color: rgba(0, 0, 0, 0.5);"); // Semi-transparent background
+        pauseMenu.setPrefSize(540, 960); // Set preferred size to match the scene
+
+    }
+
+    private void togglePause(){
+        Platform.runLater(() -> {
+            synchronized (lock) {
+                isPaused = !isPaused; // Toggle the pause state
+                if (isGameRunning){
+                    if (isPaused) {
+                        pauseMenu.setVisible(isPaused);
+                        engine.stop(); // Stop the game engine or any ongoing processes
+                    } else {
+                        pauseMenu.setVisible(false);
+                        engine.start(); // Resume the game engine or any paused processes
+                    }
+                }
+            }
+        });
+
+
+    }
+
+
 
     private void saveGame() {
         new Thread(new Runnable() {
@@ -675,13 +752,14 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
     public void restartGame() {
         try {
             level = 0;
-            heart = 3;
+            heart = 5;
             score = 0;
             vX = 3.000;
+            vY = 3.000;
             destroyedBlockCount = 0;
             resetCollideFlags();
             goDownBall = true;
-
+            isGameRunning = false;
             isGoldStatus = false;
             isExistHeartBlock = false;
             time = 0;
@@ -752,22 +830,23 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
                         }
 
                         if (block.type == Block.BLOCK_STAR) {
-                            isGoldStatus = true;
+                            if (!isGoldStatus) {
+                                isGoldStatus = true;
+                                soundPlayer.playBackgroundMusic("golden.wav", 0.5);
+                                System.out.println("gold ball");
+                                Platform.runLater(() -> {
+                                    ball.setFill(new ImagePattern(new Image("starmario.png")));
 
-                            soundPlayer.playBackgroundMusic("golden.wav", 0.5);
-                            System.out.println("gold ball");
-                            Platform.runLater(() -> {
-                                ball.setFill(new ImagePattern(new Image("starmario.png")));
-
-                                // Create a new Timeline for the delay
-                                Timeline timeline = new Timeline(new KeyFrame(Duration.seconds(10), event -> {
-                                    isGoldStatus = false;
-                                    soundPlayer.playBackgroundMusic("background.mp3", 0.5);
-                                    ball.setFill(new ImagePattern(new Image("mario.png")));
-                                }));
-                                timeline.setCycleCount(1); // Ensure it only runs once
-                                timeline.play();
-                            });
+                                    // Create a new Timeline for the delay
+                                    Timeline timeline = new Timeline(new KeyFrame(Duration.seconds(10), event -> {
+                                        isGoldStatus = false;
+                                        soundPlayer.playBackgroundMusic("background.mp3", 0.5);
+                                        ball.setFill(new ImagePattern(new Image("mario.png")));
+                                    }));
+                                    timeline.setCycleCount(1); // Ensure it only runs once
+                                    timeline.play();
+                                });
+                            }
                         }
 
 
