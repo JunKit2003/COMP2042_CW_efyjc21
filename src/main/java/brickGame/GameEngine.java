@@ -65,6 +65,15 @@ public class GameEngine {
         isStopped = false;
     }
 
+    public void start(long t) {
+        time = t;
+        Initialize();
+        Update();
+        PhysicsCalculation();
+        TimeStart();
+        isStopped = false;
+    }
+
     public void stop() {
         if (!isStopped) {
             isStopped = true;

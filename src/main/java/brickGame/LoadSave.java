@@ -8,7 +8,9 @@ import java.util.ArrayList; // Importing necessary Java classes for I/O operatio
 
 public class LoadSave { // Class for handling loading and saving game states
     public boolean isExistHeartBlock; // Boolean flag to indicate existence of a special block
-    public boolean isGoldStauts; // Boolean flag for gold status
+    public boolean isGoldStatus; // Boolean flag for gold status
+    public boolean isBigBall; // Boolean flag for gold status
+    public boolean isSmallBall; // Boolean flag for gold status
     public boolean goDownBall; // Boolean flag for ball movement direction
     public boolean goRightBall; // Boolean flag for ball movement direction
     public boolean colideToBreak; // Boolean flag for collision detection
@@ -52,10 +54,11 @@ public class LoadSave { // Class for handling loading and saving game states
             yBreak = inputStream.readDouble();
             centerBreakX = inputStream.readDouble();
             time = inputStream.readLong();
-            goldTime = inputStream.readLong();
             vX = inputStream.readDouble();
             isExistHeartBlock = inputStream.readBoolean();
-            isGoldStauts = inputStream.readBoolean();
+            isGoldStatus = inputStream.readBoolean();
+            isBigBall = inputStream.readBoolean();
+            isSmallBall = inputStream.readBoolean();
             goDownBall = inputStream.readBoolean();
             goRightBall = inputStream.readBoolean();
             colideToBreak = inputStream.readBoolean();
