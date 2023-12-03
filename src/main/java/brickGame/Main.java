@@ -74,6 +74,8 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
     private int  score    = 0;
     private long time     = 0;
 
+    private long lastLevelUpTime = 0;
+
 
     private GameEngine engine;
     public static String savePath    = "C:\\Developing Maintainable Software\\COMP2042_CW_efyjc21\\src\\main\\save\\save.mdds";
@@ -120,9 +122,14 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
         isBigBall = false ;
         isSmallBall = false;
 
+        long currentTime = System.currentTimeMillis();
+
         soundPlayer.playBackgroundMusic("background.mp3", 0.5);
-        if (loadFromSave == false) {
-            level++;
+        if (!loadFromSave) {
+            if (currentTime - lastLevelUpTime >= 5000) {
+                level++;
+                lastLevelUpTime = currentTime; // Update the last level-up time
+            }
             if (level >1){
                 new Score().showMessage("Level Up :)", this);
             }
@@ -156,7 +163,7 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
         levelLabel.setTranslateY(20);
         heartLabel = new Label("Heart : " + heart);
         heartLabel.setTranslateX(sceneWidth - 80);
-        if (loadFromSave == false) {
+        if (!loadFromSave) {
             root.getChildren().addAll(rect, ball, scoreLabel, heartLabel, levelLabel, load, newGame, exitGame);
         } else {
             root.getChildren().addAll(rect, ball, scoreLabel, heartLabel, levelLabel);
@@ -173,7 +180,7 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
         primaryStage.setScene(scene);
         primaryStage.show();
 
-        if (loadFromSave == false) {
+        if (!loadFromSave) {
             if (level > 1 && level < 5) {
                 synchronized (lock) {
                     load.setVisible(false);
@@ -369,10 +376,10 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
     private boolean collideToBottomBlock         = false;
     private boolean collideToLeftBlock           = false;
     private boolean collideToTopBlock            = false;
-    private boolean colideToTopRightCornerBlock = false; // Flag for collision with a block on the top right corner
-    private boolean colideToTopLeftCornerBlock = false; // Flag for collision with a block on the top left corner
-    private boolean colideToBottomLeftCornerBlock = false; // Flag for collision with a block on the bottom left corner
-    private boolean colideToBottomRightCornerBlock= false; // Flag for collision with a block on the bottom right corner
+    private boolean collideToTopRightCornerBlock = false; // Flag for collision with a block on the top right corner
+    private boolean collideToTopLeftCornerBlock = false; // Flag for collision with a block on the top left corner
+    private boolean collideToBottomLeftCornerBlock = false; // Flag for collision with a block on the bottom left corner
+    private boolean collideToBottomRightCornerBlock = false; // Flag for collision with a block on the bottom right corner
 
     private double vX = 3.000;
     private double vY = 3.000;
@@ -391,10 +398,10 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
         collideToBottomBlock = false;
         collideToLeftBlock = false;
         collideToTopBlock = false;
-        colideToBottomLeftCornerBlock = false; // Resetting the flag for collision with bottom left corner block
-        colideToBottomRightCornerBlock = false; // Resetting the flag for collision with a bottom right corner block
-        colideToTopLeftCornerBlock = false; // Resetting the flag for collision with a top left corner block
-        colideToTopRightCornerBlock = false; // Resetting the flag for collision with a top right corner block
+        collideToBottomLeftCornerBlock = false; // Resetting the flag for collision with bottom left corner block
+        collideToBottomRightCornerBlock = false; // Resetting the flag for collision with a bottom right corner block
+        collideToTopLeftCornerBlock = false; // Resetting the flag for collision with a top left corner block
+        collideToTopRightCornerBlock = false; // Resetting the flag for collision with a top right corner block
     }
 
     private void setPhysicsToBall() {
@@ -522,22 +529,22 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
         if (collideToBottomBlock) {
             goDownBall = true;
         }
-        if (colideToBottomRightCornerBlock) {
+        if (collideToBottomRightCornerBlock) {
             goDownBall = true; // Setting the ball to move down if it collided with a block on the bottom
             goRightBall = true ;
         }
 
-        if (colideToBottomLeftCornerBlock) {
+        if (collideToBottomLeftCornerBlock) {
             goDownBall = true; // Setting the ball to move down if it collided with a block on the bottom
             goRightBall = false ;
         }
 
-        if (colideToTopRightCornerBlock) {
+        if (collideToTopRightCornerBlock) {
             goDownBall = false; // Setting the ball to move down if it collided with a block on the bottom
             goRightBall = true ;
         }
 
-        if (colideToTopLeftCornerBlock) {
+        if (collideToTopLeftCornerBlock) {
             goDownBall = false; // Setting the ball to move down if it collided with a block on the bottom
             goRightBall = false ;
         }
@@ -632,10 +639,10 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
                     outputStream.writeBoolean(collideToBottomBlock);
                     outputStream.writeBoolean(collideToLeftBlock);
                     outputStream.writeBoolean(collideToTopBlock);
-                    outputStream.writeBoolean(colideToTopLeftCornerBlock); // Saving the collision state with a top-left corner block
-                    outputStream.writeBoolean(colideToBottomLeftCornerBlock); // Saving the collision state with a bottom-left corner block
-                    outputStream.writeBoolean(colideToTopRightCornerBlock); // Saving the collision state with a top-right corner block
-                    outputStream.writeBoolean(colideToBottomRightCornerBlock); // Saving the collision state with a bottom-right corner block
+                    outputStream.writeBoolean(collideToTopLeftCornerBlock); // Saving the collision state with a top-left corner block
+                    outputStream.writeBoolean(collideToBottomLeftCornerBlock); // Saving the collision state with a bottom-left corner block
+                    outputStream.writeBoolean(collideToTopRightCornerBlock); // Saving the collision state with a top-right corner block
+                    outputStream.writeBoolean(collideToBottomRightCornerBlock); // Saving the collision state with a bottom-right corner block
 
                     ArrayList<BlockSerializable> blockSerializables = new ArrayList<BlockSerializable>();
                     for (Block block : blocks) {
@@ -687,10 +694,10 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
         collideToBottomBlock = loadSave.colideToBottomBlock;
         collideToLeftBlock = loadSave.colideToLeftBlock;
         collideToTopBlock = loadSave.colideToTopBlock;
-        colideToTopLeftCornerBlock = loadSave.colideToTopLeftCornerBlock; // Setting the collision state with a top-left corner block
-        colideToBottomLeftCornerBlock = loadSave.colideToBottomLeftCornerBlock; // Setting the collision state with a bottom-left corner block
-        colideToTopRightCornerBlock = loadSave.colideToTopRightCornerBlock; // Setting the collision state with a top-right corner block
-        colideToBottomRightCornerBlock = loadSave.colideToBottomRightCornerBlock; // Setting the collision state with a bottom-right corner block
+        collideToTopLeftCornerBlock = loadSave.colideToTopLeftCornerBlock; // Setting the collision state with a top-left corner block
+        collideToBottomLeftCornerBlock = loadSave.colideToBottomLeftCornerBlock; // Setting the collision state with a bottom-left corner block
+        collideToTopRightCornerBlock = loadSave.colideToTopRightCornerBlock; // Setting the collision state with a top-right corner block
+        collideToBottomRightCornerBlock = loadSave.colideToBottomRightCornerBlock; // Setting the collision state with a bottom-right corner block
         level = loadSave.level;
         score = loadSave.score;
         heart = loadSave.heart;
@@ -726,8 +733,8 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
         Platform.runLater(() -> {
             try {
                 synchronized (lock){
-                    vX = 3.000;
-                    vY = 3.000;
+                    vX = 2.000;
+                    vY = 2.000;
                     ballRadius = 20;
 
                     isGoldStatus = false;
@@ -905,13 +912,13 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
                         } else if (hitCode == Block.HIT_TOP) {
                             collideToTopBlock = true; // Setting the flag for collision with a block on the top
                         } else if (hitCode == Block.HIT_TOP_LEFT) {
-                            colideToTopLeftCornerBlock = true; // Setting the flag for collision with the top-left corner
+                            collideToTopLeftCornerBlock = true; // Setting the flag for collision with the top-left corner
                         } else if (hitCode == Block.HIT_BOTTOM_LEFT) {
-                            colideToBottomLeftCornerBlock = true; // Setting the flag for collision with the bottom-left corner
+                            collideToBottomLeftCornerBlock = true; // Setting the flag for collision with the bottom-left corner
                         } else if (hitCode == Block.HIT_TOP_RIGHT) {
-                            colideToTopRightCornerBlock = true; // Setting the flag for collision with the top-right corner
+                            collideToTopRightCornerBlock = true; // Setting the flag for collision with the top-right corner
                         } else if (hitCode == Block.HIT_BOTTOM_RIGHT) {
-                            colideToBottomRightCornerBlock = true; // Setting the flag for collision with the bottom-right corner
+                            collideToBottomRightCornerBlock = true; // Setting the flag for collision with the bottom-right corner
                         }
                     }
 
