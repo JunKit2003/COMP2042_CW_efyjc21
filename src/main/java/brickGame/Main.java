@@ -1,8 +1,9 @@
 package brickGame;
 
+import javafx.animation.PauseTransition;
+import javafx.util.Duration;
 import javafx.application.Application;
 import javafx.application.Platform;
-import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -15,53 +16,81 @@ import javafx.scene.paint.ImagePattern;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
-
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Random;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
+import javafx.geometry.Pos;
 
+
+
+/**
+ * The Main class serves as the entry point for the brick game application.
+ * It initializes the game, handles user inputs, and manages the game loop and updates.
+ */
 public class Main extends Application implements EventHandler<KeyEvent>, GameEngine.OnAction {
 
-
+    private final Object lock = new Object();
     private int level = 0;
 
-    private double xBreak = 0.0f;
+    private double xBreak = 200.0f;
+
+    /** The x-coordinate of the center of the breakable object in the game. */
     private double centerBreakX;
-    private double yBreak = 640.0f;
+    private double yBreak = 930.0f;
 
     private int breakWidth     = 130;
     private int breakHeight    = 30;
     private int halfBreakWidth = breakWidth / 2;
 
-    private int sceneWidth = 500;
-    private int sceneHeigt = 700;
+    private int sceneWidth = 540;
+    private int sceneHeight = 960;
 
     private static int LEFT  = 1;
     private static int RIGHT = 2;
 
+    /** The graphical representation of the ball in the game. */
     private Circle ball;
+
+    /** The x-coordinate of the ball's position. */
     private double xBall;
+
+    /** The y-coordinate of the ball's position. */
     private double yBall;
 
-    private boolean isGoldStauts      = false;
+    private boolean isGoldStatus = false;
     private boolean isExistHeartBlock = false;
 
+    private boolean isGameRunning = false;
+
+    private boolean isBigBall = false;
+
+    private boolean isSmallBall = false;
+
+    private boolean isPaused = false;
+
+    /** The graphical representation of a rectangle shape in the game. */
     private Rectangle rect;
-    private int       ballRadius = 10;
+    private int       ballRadius = 20;
+
 
     private int destroyedBlockCount = 0;
 
     private double v = 1.000;
 
-    private int  heart    = 3;
+    private int  heart    = 5;
     private int  score    = 0;
     private long time     = 0;
-    private long hitTime  = 0;
-    private long goldTime = 0;
 
+    private long lastLevelUpTime = 0;
+
+    /** The game engine responsible for handling the game's logic and updates. */
     private GameEngine engine;
-    public static String savePath    = "D:/save/save.mdds";
-    public static String savePathDir = "D:/save/";
+    public static final String savePath    = "./src/main/java/save/save.mdds";
+    public static final String savePathDir = "./src/main/java/save/";
 
     private ArrayList<Block> blocks = new ArrayList<Block>();
     private ArrayList<Bonus> chocos = new ArrayList<Bonus>();
@@ -85,24 +114,47 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
     private Label            heartLabel;
     private Label            levelLabel;
 
+    private StackPane       pauseMenu;
+
     private boolean loadFromSave = false;
 
     Stage  primaryStage;
     Button load    = null;
     Button newGame = null;
+    Button exitGame = null;
 
+
+    Sound soundPlayer = new Sound();
     @Override
+
+
+    /**
+     * Starts the game application and initializes the primary stage.
+     *
+     * @param primaryStage The primary stage for this application.
+     */
     public void start(Stage primaryStage) throws Exception {
         this.primaryStage = primaryStage;
+        isGoldStatus = false;
+        isBigBall = false ;
+        isSmallBall = false;
 
+        long currentTime = System.currentTimeMillis();
 
-        if (loadFromSave == false) {
-            level++;
+        soundPlayer.playBackgroundMusic("background.mp3", 0.5);
+        if (!loadFromSave) {
+            if (currentTime - lastLevelUpTime >= 5000) {
+                level++;
+                lastLevelUpTime = currentTime; // Update the last level-up time
+            }
             if (level >1){
                 new Score().showMessage("Level Up :)", this);
             }
-            if (level == 18) {
+            if (level == 20) {
+                isGameRunning = false;
                 new Score().showWin(this);
+                engine.stop();
+                soundPlayer.playSoundEffect("win.mp3", 1.0);
                 return;
             }
 
@@ -110,13 +162,16 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
             initBreak();
             initBoard();
 
+
             load = new Button("Load Game");
             newGame = new Button("Start New Game");
-            load.setTranslateX(220);
-            load.setTranslateY(300);
-            newGame.setTranslateX(220);
-            newGame.setTranslateY(340);
-
+            exitGame = new Button("Exit Game");
+            load.setTranslateX(240);
+            load.setTranslateY(380);
+            newGame.setTranslateX(240);
+            newGame.setTranslateY(420);
+            exitGame.setTranslateX((240));
+            exitGame.setTranslateY(460);
         }
 
 
@@ -125,65 +180,96 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
         levelLabel = new Label("Level: " + level);
         levelLabel.setTranslateY(20);
         heartLabel = new Label("Heart : " + heart);
-        heartLabel.setTranslateX(sceneWidth - 70);
-        if (loadFromSave == false) {
-            root.getChildren().addAll(rect, ball, scoreLabel, heartLabel, levelLabel, newGame);
+        heartLabel.setTranslateX(sceneWidth - 80);
+        if (!loadFromSave) {
+            root.getChildren().addAll(rect, ball, scoreLabel, heartLabel, levelLabel, load, newGame, exitGame);
         } else {
             root.getChildren().addAll(rect, ball, scoreLabel, heartLabel, levelLabel);
         }
         for (Block block : blocks) {
             root.getChildren().add(block.rect);
         }
-        Scene scene = new Scene(root, sceneWidth, sceneHeigt);
+        Scene scene = new Scene(root, sceneWidth, sceneHeight);
         scene.getStylesheets().add("style.css");
         scene.setOnKeyPressed(this);
-
+        primaryStage.setResizable(false);
+        primaryStage.sizeToScene();
         primaryStage.setTitle("Game");
         primaryStage.setScene(scene);
         primaryStage.show();
 
-        if (loadFromSave == false) {
-            if (level > 1 && level < 18) {
-                load.setVisible(false);
-                newGame.setVisible(false);
+        if (!loadFromSave) {
+            if (level > 1 && level < 20) {
+                synchronized (lock) {
+                    load.setVisible(false);
+                    newGame.setVisible(false);
+                    exitGame.setVisible(false);
+
+                }
+                isPaused = false ;
                 engine = new GameEngine();
                 engine.setOnAction(this);
                 engine.setFps(120);
                 engine.start();
             }
 
-            load.setOnAction(new EventHandler<ActionEvent>() {
-                @Override
-                public void handle(ActionEvent event) {
+            load.setOnAction(event -> {
+                File saveFile = new File(Main.savePath);
+
+                if (!saveFile.exists()) {
+                    System.out.println("Error: No save file found at " + Main.savePath);
+                    new Score().showMessage("No save file found !", this);
+                }
+                else{
                     loadGame();
-
-                    load.setVisible(false);
-                    newGame.setVisible(false);
+                    isGameRunning = true;
+                    isPaused = false ;
+                    synchronized (lock) {
+                        load.setVisible(false);
+                        newGame.setVisible(false);
+                        exitGame.setVisible(false);
+                    }
                 }
             });
 
-            newGame.setOnAction(new EventHandler<ActionEvent>() {
-                @Override
-                public void handle(ActionEvent event) {
-                    engine = new GameEngine();
-                    engine.setOnAction(Main.this);
-                    engine.setFps(120);
-                    engine.start();
 
+            newGame.setOnAction(event -> {
+                isGameRunning = true;
+                engine = new GameEngine();
+                engine.setOnAction(Main.this);
+                engine.setFps(120);
+                engine.start();
+                isPaused = false ;
+
+                synchronized (lock) {
                     load.setVisible(false);
                     newGame.setVisible(false);
+                    exitGame.setVisible(false);
                 }
             });
+
+            exitGame.setOnAction(event -> {
+                Platform.exit();
+
+            });
+
+
+
         } else {
             engine = new GameEngine();
             engine.setOnAction(this);
             engine.setFps(120);
-            engine.start();
+            engine.start(time);
             loadFromSave = false;
         }
-
+        setupPauseMenu();
+        ((Pane) scene.getRoot()).getChildren().add(pauseMenu);
 
     }
+
+
+
+
 
     private void initBoard() {
         for (int i = 0; i < 4; i++) {
@@ -194,7 +280,7 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
                 }
                 int type;
                 if (r % 10 == 1) {
-                    type = Block.BLOCK_CHOCO;
+                    type = Block.BLOCK_QUESTION;
                 } else if (r % 10 == 2) {
                     if (!isExistHeartBlock) {
                         type = Block.BLOCK_HEART;
@@ -204,6 +290,13 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
                     }
                 } else if (r % 10 == 3) {
                     type = Block.BLOCK_STAR;
+                } else if (r % 10 == 4) {
+                        if (Math.random() < 0.5) {  // 50% chance for each type
+                            type = Block.BLOCK_MINI;
+                        } else {
+                            type = Block.BLOCK_GIANT;
+                        }
+
                 } else {
                     type = Block.BLOCK_NORMAL;
                 }
@@ -219,6 +312,12 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
     }
 
     @Override
+
+    /**
+     * Handles key event inputs during the game.
+     *
+     * @param event The key event to be handled.
+     */
     public void handle(KeyEvent event) {
         switch (event.getCode()) {
             case LEFT:
@@ -234,97 +333,110 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
             case S:
                 saveGame();
                 break;
+            case P:
+                togglePause();
+                break;
+
         }
     }
 
     float oldXBreak;
 
     private void move(final int direction) {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                int sleepTime = 4;
-                for (int i = 0; i < 30; i++) {
-                    if (xBreak == (sceneWidth - breakWidth) && direction == RIGHT) {
-                        return;
-                    }
-                    if (xBreak == 0 && direction == LEFT) {
-                        return;
-                    }
+        Platform.runLater(() -> {
+            Timeline timeline = new Timeline();
+            timeline.setCycleCount(30); // Run for 30 cycles
+
+            KeyFrame moveFrame = new KeyFrame(Duration.millis(4), event -> {
+                if ((xBreak == (sceneWidth - breakWidth) && direction == RIGHT) || (xBreak == 0 && direction == LEFT)) {
+                    timeline.stop();
+                } else {
                     if (direction == RIGHT) {
                         xBreak++;
                     } else {
                         xBreak--;
                     }
                     centerBreakX = xBreak + halfBreakWidth;
-                    try {
-                        Thread.sleep(sleepTime);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                    if (i >= 20) {
-                        sleepTime = i;
-                    }
                 }
-            }
-        }).start();
+            });
 
-
+            timeline.getKeyFrames().add(moveFrame);
+            timeline.play();
+        });
     }
 
 
     private void initBall() {
-        Random random = new Random();
-        xBall = random.nextInt(sceneWidth) + 1;
-        yBall = random.nextInt(sceneHeigt - 200) + ((level + 1) * Block.getHeight()) + 15;
         ball = new Circle();
         ball.setRadius(ballRadius);
-        ball.setFill(new ImagePattern(new Image("ball.png")));
+
+        // Set x to the middle of the scene width
+        xBall = sceneWidth / 2;
+
+        // Set y to the bottom of the scene height minus the ball's radius
+        yBall = sceneHeight - 400;
+
+        // Set the position of the ball
+        ball.setCenterX(xBall);
+        ball.setCenterY(yBall);
+
+        // Set the image fill for the ball
+        ball.setFill(new ImagePattern(new Image("mario.png")));
     }
+
 
     private void initBreak() {
-        rect = new Rectangle();
-        rect.setWidth(breakWidth);
-        rect.setHeight(breakHeight);
-        rect.setX(xBreak);
-        rect.setY(yBreak);
+            rect = new Rectangle();
+            rect.setWidth(breakWidth);
+            rect.setHeight(breakHeight);
+            rect.setX(xBreak);
+            rect.setY(yBreak);
 
-        ImagePattern pattern = new ImagePattern(new Image("block.jpg"));
+            ImagePattern pattern = new ImagePattern(new Image("block.jpg"));
 
-        rect.setFill(pattern);
+            rect.setFill(pattern);
+
     }
 
+    private boolean goDownBall                   = true;
+    private boolean goRightBall                  = true;
+    private boolean collideToBreak               = false;
+    private boolean collideToBreakAndMoveToRight = true;
+    private boolean collideToRightWall           = false;
+    private boolean collideToLeftWall            = false;
+    private boolean collideToRightBlock          = false;
+    private boolean collideToBottomBlock         = false;
+    private boolean collideToLeftBlock           = false;
+    private boolean collideToTopBlock            = false;
+    private boolean collideToTopRightCornerBlock = false; // Flag for collision with a block on the top right corner
+    private boolean collideToTopLeftCornerBlock = false; // Flag for collision with a block on the top left corner
+    private boolean collideToBottomLeftCornerBlock = false; // Flag for collision with a block on the bottom left corner
+    private boolean collideToBottomRightCornerBlock = false; // Flag for collision with a block on the bottom right corner
 
-    private boolean goDownBall                  = true;
-    private boolean goRightBall                 = true;
-    private boolean colideToBreak               = false;
-    private boolean colideToBreakAndMoveToRight = true;
-    private boolean colideToRightWall           = false;
-    private boolean colideToLeftWall            = false;
-    private boolean colideToRightBlock          = false;
-    private boolean colideToBottomBlock         = false;
-    private boolean colideToLeftBlock           = false;
-    private boolean colideToTopBlock            = false;
-
-    private double vX = 1.000;
-    private double vY = 1.000;
+    private double vX = 2.000;
+    private double vY = 2.000;
 
 
-    private void resetColideFlags() {
 
-        colideToBreak = false;
-        colideToBreakAndMoveToRight = false;
-        colideToRightWall = false;
-        colideToLeftWall = false;
 
-        colideToRightBlock = false;
-        colideToBottomBlock = false;
-        colideToLeftBlock = false;
-        colideToTopBlock = false;
+    private void resetCollideFlags() {
+
+        collideToBreak = false;
+        collideToBreakAndMoveToRight = false;
+        collideToRightWall = false;
+        collideToLeftWall = false;
+
+        collideToRightBlock = false;
+        collideToBottomBlock = false;
+        collideToLeftBlock = false;
+        collideToTopBlock = false;
+        collideToBottomLeftCornerBlock = false; // Resetting the flag for collision with bottom left corner block
+        collideToBottomRightCornerBlock = false; // Resetting the flag for collision with a bottom right corner block
+        collideToTopLeftCornerBlock = false; // Resetting the flag for collision with a top left corner block
+        collideToTopRightCornerBlock = false; // Resetting the flag for collision with a top right corner block
     }
 
     private void setPhysicsToBall() {
-        //v = ((time - hitTime) / 1000.000) + 1.000;
 
         if (goDownBall) {
             yBall += vY;
@@ -338,34 +450,45 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
             xBall -= vX;
         }
 
-        if (yBall <= 0) {
+        if (yBall - ballRadius <= 0) {
             //vX = 1.000;
-            resetColideFlags();
+            soundPlayer.playSoundEffect("bump.wav", 1.0);
+            resetCollideFlags();
             goDownBall = true;
             return;
         }
-        if (yBall >= sceneHeigt) {
+        if (yBall + ballRadius >= sceneHeight) {
+            soundPlayer.playSoundEffect("bump.wav", 1.0);
+            resetCollideFlags();
             goDownBall = false;
-            if (!isGoldStauts) {
-                //TODO gameover
+            if (!isGoldStatus) {
                 heart--;
-                new Score().show(sceneWidth / 2, sceneHeigt / 2, -1, this);
+                soundPlayer.playSoundEffect("hurt.wav", 1.0);
+                new Score().show(sceneWidth / 2, sceneHeight / 2, -1, this);
 
                 if (heart == 0) {
-                    new Score().showGameOver(this);
-                    engine.stop();
+                    Platform.runLater(() -> {
+                        isGameRunning = false;
+                        heartLabel.setText("Heart : " + heart);
+                        new Score().showGameOver(this);
+                        soundPlayer.stopMusic();
+                        soundPlayer.playSoundEffect("gameover.mp3", 1.0);
+                        ball.setFill(new ImagePattern(new Image("losemario.jpg")));
+
+                        engine.stop();
+                    });
                 }
 
             }
-            //return;
+            return;
         }
 
         if (yBall >= yBreak - ballRadius) {
             //System.out.println("Colide1");
             if (xBall >= xBreak && xBall <= xBreak + breakWidth) {
-                hitTime = time;
-                resetColideFlags();
-                colideToBreak = true;
+                resetCollideFlags();
+                collideToBreak = true;
+                soundPlayer.playSoundEffect("breakhit.wav", 1.0);
                 goDownBall = false;
 
                 double relation = (xBall - centerBreakX) / (breakWidth / 2);
@@ -382,28 +505,30 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
                 }
 
                 if (xBall - centerBreakX > 0) {
-                    colideToBreakAndMoveToRight = true;
+                    collideToBreakAndMoveToRight = true;
                 } else {
-                    colideToBreakAndMoveToRight = false;
+                    collideToBreakAndMoveToRight = false;
                 }
                 //System.out.println("Colide2");
             }
         }
 
-        if (xBall >= sceneWidth) {
-            resetColideFlags();
+        if (xBall + ballRadius >= sceneWidth) {
+            resetCollideFlags();
+            soundPlayer.playSoundEffect("bump.wav", 1.0);
             //vX = 1.000;
-            colideToRightWall = true;
+            collideToRightWall = true;
         }
 
-        if (xBall <= 0) {
-            resetColideFlags();
+        if (xBall - ballRadius <= 0) {
+            resetCollideFlags();
+            soundPlayer.playSoundEffect("bump.wav", 1.0);
             //vX = 1.000;
-            colideToLeftWall = true;
+            collideToLeftWall = true;
         }
 
-        if (colideToBreak) {
-            if (colideToBreakAndMoveToRight) {
+        if (collideToBreak) {
+            if (collideToBreakAndMoveToRight) {
                 goRightBall = true;
             } else {
                 goRightBall = false;
@@ -412,30 +537,49 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
 
         //Wall Colide
 
-        if (colideToRightWall) {
+        if (collideToRightWall) {
             goRightBall = false;
         }
 
-        if (colideToLeftWall) {
+        if (collideToLeftWall) {
             goRightBall = true;
         }
 
         //Block Colide
 
-        if (colideToRightBlock) {
+        if (collideToRightBlock) {
             goRightBall = true;
         }
 
-        if (colideToLeftBlock) {
-            goRightBall = true;
+        if (collideToLeftBlock) {
+            goRightBall = false;
         }
 
-        if (colideToTopBlock) {
+        if (collideToTopBlock) {
             goDownBall = false;
         }
 
-        if (colideToBottomBlock) {
+        if (collideToBottomBlock) {
             goDownBall = true;
+        }
+        if (collideToBottomRightCornerBlock) {
+            goDownBall = true; // Setting the ball to move down if it collided with a block on the bottom
+            goRightBall = true ;
+        }
+
+        if (collideToBottomLeftCornerBlock) {
+            goDownBall = true; // Setting the ball to move down if it collided with a block on the bottom
+            goRightBall = false ;
+        }
+
+        if (collideToTopRightCornerBlock) {
+            goDownBall = false; // Setting the ball to move down if it collided with a block on the bottom
+            goRightBall = true ;
+        }
+
+        if (collideToTopLeftCornerBlock) {
+            goDownBall = false; // Setting the ball to move down if it collided with a block on the bottom
+            goRightBall = false ;
         }
 
 
@@ -444,16 +588,66 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
 
     private void checkDestroyedCount() {
         if (destroyedBlockCount == blocks.size()) {
-            //TODO win level todo...
-            //System.out.println("You Win");
-
-            nextLevel();
+            System.out.println("Congratuations ! You completed level "+ level);
+            Platform.runLater(() -> {
+                nextLevel();
+            });
         }
     }
+
+    private void setupPauseMenu() {
+        Button btnResume = new Button("Resume");
+        Button btnExit = new Button("Exit to Main Menu");
+
+        // Set up button actions
+        btnResume.setOnAction(e -> togglePause());
+        btnExit.setOnAction(e -> restartGame());
+
+        VBox menuLayout = new VBox(10, btnResume, btnExit);
+        menuLayout.setAlignment(Pos.CENTER);
+
+        pauseMenu = new StackPane(menuLayout);
+        pauseMenu.setVisible(false); // Initially hidden
+        pauseMenu.setStyle("-fx-background-color: rgba(0, 0, 0, 0.5);"); // Semi-transparent background
+        pauseMenu.setPrefSize(540, 960); // Set preferred size to match the scene
+
+    }
+
+    private void togglePause(){
+        Platform.runLater(() -> {
+            synchronized (lock) {
+                isPaused = !isPaused; // Toggle the pause state
+                if (isGameRunning){
+                    if (isPaused) {
+                        pauseMenu.setVisible(isPaused);
+                        engine.stop(); // Stop the game engine or any ongoing processes
+                        soundPlayer.stopMusic();
+                    } else {
+                        pauseMenu.setVisible(false);
+                        engine.start(); // Resume the game engine or any paused processes
+                        if(isGoldStatus){
+                            soundPlayer.playBackgroundMusic("golden.wav",0.5);
+                        }
+                        else{
+                            soundPlayer.playBackgroundMusic("background.mp3",0.5);
+                        }
+                    }
+                }
+            }
+        });
+
+
+    }
+
+
 
     private void saveGame() {
         new Thread(new Runnable() {
             @Override
+
+            /**
+             * Main game loop method that executes repeatedly during the game.
+             */
             public void run() {
                 new File(savePathDir).mkdirs();
                 File file = new File(savePath);
@@ -464,7 +658,6 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
                     outputStream.writeInt(level);
                     outputStream.writeInt(score);
                     outputStream.writeInt(heart);
-                    outputStream.writeInt(destroyedBlockCount);
 
 
                     outputStream.writeDouble(xBall);
@@ -473,22 +666,27 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
                     outputStream.writeDouble(yBreak);
                     outputStream.writeDouble(centerBreakX);
                     outputStream.writeLong(time);
-                    outputStream.writeLong(goldTime);
                     outputStream.writeDouble(vX);
 
 
                     outputStream.writeBoolean(isExistHeartBlock);
-                    outputStream.writeBoolean(isGoldStauts);
+                    outputStream.writeBoolean(isGoldStatus);
+                    outputStream.writeBoolean(isBigBall);
+                    outputStream.writeBoolean(isSmallBall);
                     outputStream.writeBoolean(goDownBall);
                     outputStream.writeBoolean(goRightBall);
-                    outputStream.writeBoolean(colideToBreak);
-                    outputStream.writeBoolean(colideToBreakAndMoveToRight);
-                    outputStream.writeBoolean(colideToRightWall);
-                    outputStream.writeBoolean(colideToLeftWall);
-                    outputStream.writeBoolean(colideToRightBlock);
-                    outputStream.writeBoolean(colideToBottomBlock);
-                    outputStream.writeBoolean(colideToLeftBlock);
-                    outputStream.writeBoolean(colideToTopBlock);
+                    outputStream.writeBoolean(collideToBreak);
+                    outputStream.writeBoolean(collideToBreakAndMoveToRight);
+                    outputStream.writeBoolean(collideToRightWall);
+                    outputStream.writeBoolean(collideToLeftWall);
+                    outputStream.writeBoolean(collideToRightBlock);
+                    outputStream.writeBoolean(collideToBottomBlock);
+                    outputStream.writeBoolean(collideToLeftBlock);
+                    outputStream.writeBoolean(collideToTopBlock);
+                    outputStream.writeBoolean(collideToTopLeftCornerBlock); // Saving the collision state with a top-left corner block
+                    outputStream.writeBoolean(collideToBottomLeftCornerBlock); // Saving the collision state with a bottom-left corner block
+                    outputStream.writeBoolean(collideToTopRightCornerBlock); // Saving the collision state with a top-right corner block
+                    outputStream.writeBoolean(collideToBottomRightCornerBlock); // Saving the collision state with a bottom-right corner block
 
                     ArrayList<BlockSerializable> blockSerializables = new ArrayList<BlockSerializable>();
                     for (Block block : blocks) {
@@ -527,17 +725,23 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
 
 
         isExistHeartBlock = loadSave.isExistHeartBlock;
-        isGoldStauts = loadSave.isGoldStauts;
+        isGoldStatus = loadSave.isGoldStatus;
+        isSmallBall = loadSave.isSmallBall;
+        isBigBall = loadSave.isBigBall;
         goDownBall = loadSave.goDownBall;
         goRightBall = loadSave.goRightBall;
-        colideToBreak = loadSave.colideToBreak;
-        colideToBreakAndMoveToRight = loadSave.colideToBreakAndMoveToRight;
-        colideToRightWall = loadSave.colideToRightWall;
-        colideToLeftWall = loadSave.colideToLeftWall;
-        colideToRightBlock = loadSave.colideToRightBlock;
-        colideToBottomBlock = loadSave.colideToBottomBlock;
-        colideToLeftBlock = loadSave.colideToLeftBlock;
-        colideToTopBlock = loadSave.colideToTopBlock;
+        collideToBreak = loadSave.colideToBreak;
+        collideToBreakAndMoveToRight = loadSave.colideToBreakAndMoveToRight;
+        collideToRightWall = loadSave.colideToRightWall;
+        collideToLeftWall = loadSave.colideToLeftWall;
+        collideToRightBlock = loadSave.colideToRightBlock;
+        collideToBottomBlock = loadSave.colideToBottomBlock;
+        collideToLeftBlock = loadSave.colideToLeftBlock;
+        collideToTopBlock = loadSave.colideToTopBlock;
+        collideToTopLeftCornerBlock = loadSave.colideToTopLeftCornerBlock; // Setting the collision state with a top-left corner block
+        collideToBottomLeftCornerBlock = loadSave.colideToBottomLeftCornerBlock; // Setting the collision state with a bottom-left corner block
+        collideToTopRightCornerBlock = loadSave.colideToTopRightCornerBlock; // Setting the collision state with a top-right corner block
+        collideToBottomRightCornerBlock = loadSave.colideToBottomRightCornerBlock; // Setting the collision state with a bottom-right corner block
         level = loadSave.level;
         score = loadSave.score;
         heart = loadSave.heart;
@@ -548,7 +752,6 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
         yBreak = loadSave.yBreak;
         centerBreakX = loadSave.centerBreakX;
         time = loadSave.time;
-        goldTime = loadSave.goldTime;
         vX = loadSave.vX;
 
         blocks.clear();
@@ -571,53 +774,49 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
     }
 
     private void nextLevel() {
-        Platform.runLater(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    vX = 1.000;
+        Platform.runLater(() -> {
+            try {
+                synchronized (lock){
+                    vX = 2.000;
+                    vY = 2.000;
+                    ballRadius = 20;
 
-                    engine.stop();
-                    resetColideFlags();
+                    isGoldStatus = false;
+                    isBigBall = false;
+                    isSmallBall = false ;
+                    resetCollideFlags();
                     goDownBall = true;
-
-                    isGoldStauts = false;
+                    destroyedBlockCount = 0;
                     isExistHeartBlock = false;
-
-
-                    hitTime = 0;
                     time = 0;
-                    goldTime = 0;
-
                     engine.stop();
                     blocks.clear();
                     chocos.clear();
-                    destroyedBlockCount = 0;
                     start(primaryStage);
-
-                } catch (Exception e) {
-                    e.printStackTrace();
                 }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         });
     }
 
+    /**
+     * Restarts the game, resetting the game state to the beginning.
+     */
     public void restartGame() {
-
         try {
             level = 0;
-            heart = 3;
+            heart = 5;
             score = 0;
-            vX = 1.000;
+            vX = 2.000;
+            vY = 2.000;
             destroyedBlockCount = 0;
-            resetColideFlags();
+            resetCollideFlags();
             goDownBall = true;
-
-            isGoldStauts = false;
+            isGameRunning = false;
+            isGoldStatus = false;
             isExistHeartBlock = false;
-            hitTime = 0;
             time = 0;
-            goldTime = 0;
 
             blocks.clear();
             chocos.clear();
@@ -628,12 +827,22 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
         }
     }
 
+    private void changeBallSize(int newRadius) {
+        ballRadius = newRadius;
+        // Assuming 'ball' is your Circle object for the ball
+        Platform.runLater(() -> ball.setRadius(ballRadius));
+        // Update any other necessary attributes related to ball size
+    }
+
+
 
     @Override
+    /**
+     * Called on each frame update, handles general game updates.
+     */
     public void onUpdate() {
-        Platform.runLater(new Runnable() {
-            @Override
-            public void run() {
+        synchronized (lock) {
+            Platform.runLater(() -> {
 
                 scoreLabel.setText("Score: " + score);
                 heartLabel.setText("Heart : " + heart);
@@ -644,59 +853,125 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
                 ball.setCenterY(yBall);
 
                 for (Bonus choco : chocos) {
+
                     choco.choco.setY(choco.y);
                 }
-            }
-        });
+
+            });
 
 
-        if (yBall >= Block.getPaddingTop() && yBall <= (Block.getHeight() * (level + 1)) + Block.getPaddingTop()) {
-            for (final Block block : blocks) {
-                int hitCode = block.checkHitToBlock(xBall, yBall);
-                if (hitCode != Block.NO_HIT) {
-                    score += 1;
 
-                    new Score().show(block.x, block.y, 1, this);
+            if (yBall >= Block.getPaddingTop() && yBall <= (Block.getHeight() * (level + 1)) + Block.getPaddingTop()) {
+                for (final Block block : blocks) {
+                    int hitCode = block.checkHitToBlock(xBall, yBall, ballRadius);
+                    if (hitCode != Block.NO_HIT) {
+                        score += 1;
 
-                    block.rect.setVisible(false);
-                    block.isDestroyed = true;
-                    destroyedBlockCount++;
-                    //System.out.println("size is " + blocks.size());
-                    resetColideFlags();
 
-                    if (block.type == Block.BLOCK_CHOCO) {
-                        final Bonus choco = new Bonus(block.row, block.column);
-                        choco.timeCreated = time;
-                        Platform.runLater(new Runnable() {
-                            @Override
-                            public void run() {
-                                root.getChildren().add(choco.choco);
+                        new Score().show(block.x, block.y, 1, this);
+
+                        Platform.runLater(() ->block.rect.setVisible(false));
+                        block.isDestroyed = true;
+                        destroyedBlockCount++;
+                        //System.out.println("size is " + blocks.size());
+                        resetCollideFlags();
+                        if (block.type == block.BLOCK_NORMAL){
+                            soundPlayer.playSoundEffect("bump.wav", 1.0);
+                        }
+                        if (block.type == Block.BLOCK_QUESTION) {
+                                soundPlayer.playSoundEffect("itemblock.mp3", 1.0);
+                                final Bonus choco = new Bonus(block.row, block.column);
+                                choco.timeCreated = time;
+                                Platform.runLater(() -> root.getChildren().add(choco.choco));
+                                chocos.add(choco);
+                        }
+
+                        if (block.type == Block.BLOCK_STAR) {
+                            if (!isGoldStatus) {
+                                isGoldStatus = true;
+                                soundPlayer.playBackgroundMusic("golden.wav", 0.5);
+                                System.out.println("gold ball");
+                                Platform.runLater(() -> {
+                                    ball.setFill(new ImagePattern(new Image("starmario.png")));
+
+                                    // Create a new Timeline for the delay
+                                    Timeline timeline = new Timeline(new KeyFrame(Duration.seconds(10), event -> {
+                                        isGoldStatus = false;
+                                        soundPlayer.playBackgroundMusic("background.mp3", 0.5);
+                                        ball.setFill(new ImagePattern(new Image("mario.png")));
+                                    }));
+                                    timeline.setCycleCount(1); // Ensure it only runs once
+                                    timeline.play();
+                                });
                             }
-                        });
-                        chocos.add(choco);
+                        }
+
+
+
+                        if (block.type == Block.BLOCK_GIANT) {
+                            if (isSmallBall == false && isBigBall == false){
+                                soundPlayer.playSoundEffect("giant.mp3", 1.0);
+                                changeBallSize(100);  // Increase ball size
+                                isBigBall = true;
+                                // Start a timer to reset the size after a delay
+                                PauseTransition delay = new PauseTransition(Duration.seconds(10));
+                                delay.setOnFinished(event -> {
+                                    soundPlayer.playSoundEffect("shrink.wav", 1.0);
+                                    isBigBall = false;
+                                    changeBallSize(20); // Reset to original size
+                                });  // Reset ball size
+                                delay.play();
+                            }
+
+                        }
+
+                        if (block.type == Block.BLOCK_MINI) {
+                            soundPlayer.playSoundEffect("shrink.wav", 1.0);
+                            if (isBigBall == false && isSmallBall == false){
+                                changeBallSize(5);  // decrease ball size
+                                isSmallBall = true;
+                                // Start a timer to reset the size after a delay
+                                PauseTransition delay = new PauseTransition(Duration.seconds(10));
+                                delay.setOnFinished(event -> {
+                                    soundPlayer.playSoundEffect("grow.wav", 1.0);
+                                    isSmallBall = false;
+                                    changeBallSize(20); // Reset to original size
+                                });  // Reset ball size
+                                delay.play();
+                            }
+
+                        }
+
+
+
+
+
+
+
+                        if (block.type == Block.BLOCK_HEART) {
+                            soundPlayer.playSoundEffect("1up.wav", 1.0);
+                            heart++;
+                        }
+
+                        if (hitCode == Block.HIT_RIGHT) {
+                            collideToRightBlock = true; // Setting the flag for collision with a block on the right
+                        } else if (hitCode == Block.HIT_BOTTOM) {
+                            collideToBottomBlock = true; // Setting the flag for collision with a block on the bottom
+                        } else if (hitCode == Block.HIT_LEFT) {
+                            collideToLeftBlock = true; // Setting the flag for collision with a block on the left
+                        } else if (hitCode == Block.HIT_TOP) {
+                            collideToTopBlock = true; // Setting the flag for collision with a block on the top
+                        } else if (hitCode == Block.HIT_TOP_LEFT) {
+                            collideToTopLeftCornerBlock = true; // Setting the flag for collision with the top-left corner
+                        } else if (hitCode == Block.HIT_BOTTOM_LEFT) {
+                            collideToBottomLeftCornerBlock = true; // Setting the flag for collision with the bottom-left corner
+                        } else if (hitCode == Block.HIT_TOP_RIGHT) {
+                            collideToTopRightCornerBlock = true; // Setting the flag for collision with the top-right corner
+                        } else if (hitCode == Block.HIT_BOTTOM_RIGHT) {
+                            collideToBottomRightCornerBlock = true; // Setting the flag for collision with the bottom-right corner
+                        }
                     }
 
-                    if (block.type == Block.BLOCK_STAR) {
-                        goldTime = time;
-                        ball.setFill(new ImagePattern(new Image("goldball.png")));
-                        System.out.println("gold ball");
-                        root.getStyleClass().add("goldRoot");
-                        isGoldStauts = true;
-                    }
-
-                    if (block.type == Block.BLOCK_HEART) {
-                        heart++;
-                    }
-
-                    if (hitCode == Block.HIT_RIGHT) {
-                        colideToRightBlock = true;
-                    } else if (hitCode == Block.HIT_BOTTOM) {
-                        colideToBottomBlock = true;
-                    } else if (hitCode == Block.HIT_LEFT) {
-                        colideToLeftBlock = true;
-                    } else if (hitCode == Block.HIT_TOP) {
-                        colideToTopBlock = true;
-                    }
 
                 }
 
@@ -707,43 +982,55 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
     }
 
 
+
     @Override
+    /**
+     * Initializes the game, setting up the initial game state and UI elements.
+     */
     public void onInit() {
 
     }
 
+
     @Override
+
+    /**
+     * Handles the physics updates for the game.
+     */
     public void onPhysicsUpdate() {
         checkDestroyedCount();
         setPhysicsToBall();
 
-
-        if (time - goldTime > 5000) {
-            ball.setFill(new ImagePattern(new Image("ball.png")));
-            root.getStyleClass().remove("goldRoot");
-            isGoldStauts = false;
-        }
-
         for (Bonus choco : chocos) {
-            if (choco.y > sceneHeigt || choco.taken) {
+
+            if (choco.y > sceneHeight || choco.taken) {
                 continue;
             }
             if (choco.y >= yBreak && choco.y <= yBreak + breakHeight && choco.x >= xBreak && choco.x <= xBreak + breakWidth) {
                 System.out.println("You Got it and +3 score for you");
+                soundPlayer.playSoundEffect("collected.wav", 1.0);
                 choco.taken = true;
-                choco.choco.setVisible(false);
+                Platform.runLater(() -> {
+                            choco.choco.setVisible(false);
+                        });
                 score += 3;
                 new Score().show(choco.x, choco.y, 3, this);
             }
             choco.y += ((time - choco.timeCreated) / 1000.000) + 1.000;
         }
 
-        //System.out.println("time is:" + time + " goldTime is " + goldTime);
+
 
     }
 
 
     @Override
+
+    /**
+     * Handles time-based updates in the game.
+     *
+     * @param time The current game time.
+     */
     public void onTime(long time) {
         this.time = time;
     }

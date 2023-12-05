@@ -1,91 +1,131 @@
 package brickGame;
 
+/**
+ * The GameEngine class is responsible for managing the game's main loop and physics updates.
+ * It controls the game flow, updating game states, and rendering frames at a set frames per second (fps).
+ */
 
-public class GameEngine {
+    public class GameEngine {
 
-    private OnAction onAction;
-    private int fps = 15;
-    private Thread updateThread;
-    private Thread physicsThread;
-    public boolean isStopped = true;
+        /**
+         * The action to be executed on each frame update.
+         */
+        private OnAction onAction;
+        private int fps = 15;
 
-    public void setOnAction(OnAction onAction) {
-        this.onAction = onAction;
-    }
+        /**
+         * The thread responsible for updating game states.
+         */
+        private Thread updateThread;
 
-    /**
-     * @param fps set fps and we convert it to millisecond
-     */
-    public void setFps(int fps) {
-        this.fps = (int) 1000 / fps;
-    }
+        /**
+         * The thread responsible for managing game physics.
+         */
+        private Thread physicsThread;
+        public volatile boolean isStopped = true;
 
-    private synchronized void Update() {
-        updateThread = new Thread(new Runnable() {
-            @Override
-            public void run() {
+
+        /**
+         * Sets the action to be executed on each frame update.
+         *
+         * @param onAction The action to be executed.
+         */
+        public void setOnAction(OnAction onAction) {
+            this.onAction = onAction;
+        }
+
+        /**
+         * Sets the frames per second for the game updates.
+         *
+         * @param fps The desired frames per second.
+         */
+        public void setFps(int fps) {
+            this.fps = (int) 1000 / fps;
+        }
+
+        private synchronized void Update() {
+            updateThread = new Thread(() -> {
                 while (!updateThread.isInterrupted()) {
                     try {
                         onAction.onUpdate();
                         Thread.sleep(fps);
                     } catch (InterruptedException e) {
-                        e.printStackTrace();
+                        System.out.println("onUpdate thread interrupted.");
+                        Thread.currentThread().interrupt();
                     }
                 }
-            }
-        });
-        updateThread.start();
-    }
+            });
+            updateThread.start();
+        }
 
-    private void Initialize() {
-        onAction.onInit();
-    }
+        private void Initialize() {
+            onAction.onInit();
+        }
 
-    private synchronized void PhysicsCalculation() {
-        physicsThread = new Thread(new Runnable() {
-            @Override
-            public void run() {
+        private synchronized void PhysicsCalculation() {
+            physicsThread = new Thread(() -> {
                 while (!physicsThread.isInterrupted()) {
                     try {
                         onAction.onPhysicsUpdate();
                         Thread.sleep(fps);
                     } catch (InterruptedException e) {
-                        e.printStackTrace();
+                        System.out.println("onPhysics thread interrupted.");
+                        Thread.currentThread().interrupt();
                     }
                 }
-            }
-        });
+            });
 
-        physicsThread.start();
+            physicsThread.start();
 
-    }
-
-    public void start() {
-        time = 0;
-        Initialize();
-        Update();
-        PhysicsCalculation();
-        TimeStart();
-        isStopped = false;
-    }
-
-    public void stop() {
-        if (!isStopped) {
-            isStopped = true;
-            updateThread.stop();
-            physicsThread.stop();
-            timeThread.stop();
         }
-    }
 
-    private long time = 0;
+        /**
+         * Starts the game loop.
+         */
+        public void start() {
+            time = 0;
+            Initialize();
+            Update();
+            PhysicsCalculation();
+            TimeStart();
+            isStopped = false;
+        }
 
-    private Thread timeThread;
+        /**
+         * Starts the game loop with a specified delay.
+         *
+         * @param t The delay time in milliseconds before starting the game loop.
+         */
+        public void start(long t) {
+            time = t;
+            Initialize();
+            Update();
+            PhysicsCalculation();
+            TimeStart();
+            isStopped = false;
+        }
 
-    private void TimeStart() {
-        timeThread = new Thread(new Runnable() {
-            @Override
-            public void run() {
+        /**
+         * Stops the game loop and terminates all running threads.
+         */
+        public void stop() {
+            if (!isStopped) {
+                isStopped = true;
+                updateThread.interrupt();
+                physicsThread.interrupt();
+                timeThread.interrupt();
+            }
+        }
+
+        private long time = 0;
+
+        /**
+         * The thread responsible for time-based events.
+         */
+        private Thread timeThread;
+
+        private synchronized void TimeStart() {
+            timeThread = new Thread(() -> {
                 try {
                     while (true) {
                         time++;
@@ -93,22 +133,22 @@ public class GameEngine {
                         Thread.sleep(1);
                     }
                 } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    System.out.println("TimeStart thread interrupted.");
+                    Thread.currentThread().interrupt();
                 }
-            }
-        });
-        timeThread.start();
+            });
+            timeThread.start();
+        }
+
+
+        public interface OnAction {
+            void onUpdate();
+
+            void onInit();
+
+            void onPhysicsUpdate();
+
+            void onTime(long time);
+        }
+
     }
-
-
-    public interface OnAction {
-        void onUpdate();
-
-        void onInit();
-
-        void onPhysicsUpdate();
-
-        void onTime(long time);
-    }
-
-}
