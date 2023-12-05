@@ -27,13 +27,18 @@ import javafx.geometry.Pos;
 
 
 
-
+/**
+ * The Main class serves as the entry point for the brick game application.
+ * It initializes the game, handles user inputs, and manages the game loop and updates.
+ */
 public class Main extends Application implements EventHandler<KeyEvent>, GameEngine.OnAction {
 
     private final Object lock = new Object();
     private int level = 0;
 
     private double xBreak = 200.0f;
+
+    /** The x-coordinate of the center of the breakable object in the game. */
     private double centerBreakX;
     private double yBreak = 930.0f;
 
@@ -47,8 +52,13 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
     private static int LEFT  = 1;
     private static int RIGHT = 2;
 
+    /** The graphical representation of the ball in the game. */
     private Circle ball;
+
+    /** The x-coordinate of the ball's position. */
     private double xBall;
+
+    /** The y-coordinate of the ball's position. */
     private double yBall;
 
     private boolean isGoldStatus = false;
@@ -62,6 +72,7 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
 
     private boolean isPaused = false;
 
+    /** The graphical representation of a rectangle shape in the game. */
     private Rectangle rect;
     private int       ballRadius = 20;
 
@@ -76,11 +87,10 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
 
     private long lastLevelUpTime = 0;
 
-
+    /** The game engine responsible for handling the game's logic and updates. */
     private GameEngine engine;
-    public static String savePath    = "C:\\Developing Maintainable Software\\COMP2042_CW_efyjc21\\src\\main\\save\\save.mdds";
-    public static String savePathDir = "C:\\Developing Maintainable Software\\COMP2042_CW_efyjc21\\src\\main\\save";
-
+    public static final String savePath    = "./src/main/java/save/save.mdds";
+    public static final String savePathDir = "./src/main/java/save/";
 
     private ArrayList<Block> blocks = new ArrayList<Block>();
     private ArrayList<Bonus> chocos = new ArrayList<Bonus>();
@@ -116,6 +126,13 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
 
     Sound soundPlayer = new Sound();
     @Override
+
+
+    /**
+     * Starts the game application and initializes the primary stage.
+     *
+     * @param primaryStage The primary stage for this application.
+     */
     public void start(Stage primaryStage) throws Exception {
         this.primaryStage = primaryStage;
         isGoldStatus = false;
@@ -133,7 +150,8 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
             if (level >1){
                 new Score().showMessage("Level Up :)", this);
             }
-            if (level == 5) {
+            if (level == 20) {
+                isGameRunning = false;
                 new Score().showWin(this);
                 engine.stop();
                 soundPlayer.playSoundEffect("win.mp3", 1.0);
@@ -181,7 +199,7 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
         primaryStage.show();
 
         if (!loadFromSave) {
-            if (level > 1 && level < 5) {
+            if (level > 1 && level < 20) {
                 synchronized (lock) {
                     load.setVisible(false);
                     newGame.setVisible(false);
@@ -196,13 +214,21 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
             }
 
             load.setOnAction(event -> {
-                loadGame();
-                isGameRunning = true;
-                isPaused = false ;
-                synchronized (lock) {
-                    load.setVisible(false);
-                    newGame.setVisible(false);
-                    exitGame.setVisible(false);
+                File saveFile = new File(Main.savePath);
+
+                if (!saveFile.exists()) {
+                    System.out.println("Error: No save file found at " + Main.savePath);
+                    new Score().showMessage("No save file found !", this);
+                }
+                else{
+                    loadGame();
+                    isGameRunning = true;
+                    isPaused = false ;
+                    synchronized (lock) {
+                        load.setVisible(false);
+                        newGame.setVisible(false);
+                        exitGame.setVisible(false);
+                    }
                 }
             });
 
@@ -286,6 +312,12 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
     }
 
     @Override
+
+    /**
+     * Handles key event inputs during the game.
+     *
+     * @param event The key event to be handled.
+     */
     public void handle(KeyEvent event) {
         switch (event.getCode()) {
             case LEFT:
@@ -381,8 +413,8 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
     private boolean collideToBottomLeftCornerBlock = false; // Flag for collision with a block on the bottom left corner
     private boolean collideToBottomRightCornerBlock = false; // Flag for collision with a block on the bottom right corner
 
-    private double vX = 3.000;
-    private double vY = 3.000;
+    private double vX = 2.000;
+    private double vY = 2.000;
 
 
 
@@ -436,6 +468,7 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
 
                 if (heart == 0) {
                     Platform.runLater(() -> {
+                        isGameRunning = false;
                         heartLabel.setText("Heart : " + heart);
                         new Score().showGameOver(this);
                         soundPlayer.stopMusic();
@@ -588,9 +621,16 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
                     if (isPaused) {
                         pauseMenu.setVisible(isPaused);
                         engine.stop(); // Stop the game engine or any ongoing processes
+                        soundPlayer.stopMusic();
                     } else {
                         pauseMenu.setVisible(false);
                         engine.start(); // Resume the game engine or any paused processes
+                        if(isGoldStatus){
+                            soundPlayer.playBackgroundMusic("golden.wav",0.5);
+                        }
+                        else{
+                            soundPlayer.playBackgroundMusic("background.mp3",0.5);
+                        }
                     }
                 }
             }
@@ -604,6 +644,10 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
     private void saveGame() {
         new Thread(new Runnable() {
             @Override
+
+            /**
+             * Main game loop method that executes repeatedly during the game.
+             */
             public void run() {
                 new File(savePathDir).mkdirs();
                 File file = new File(savePath);
@@ -756,13 +800,16 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
         });
     }
 
+    /**
+     * Restarts the game, resetting the game state to the beginning.
+     */
     public void restartGame() {
         try {
             level = 0;
             heart = 5;
             score = 0;
-            vX = 3.000;
-            vY = 3.000;
+            vX = 2.000;
+            vY = 2.000;
             destroyedBlockCount = 0;
             resetCollideFlags();
             goDownBall = true;
@@ -790,6 +837,9 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
 
 
     @Override
+    /**
+     * Called on each frame update, handles general game updates.
+     */
     public void onUpdate() {
         synchronized (lock) {
             Platform.runLater(() -> {
@@ -934,12 +984,19 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
 
 
     @Override
+    /**
+     * Initializes the game, setting up the initial game state and UI elements.
+     */
     public void onInit() {
 
     }
 
 
     @Override
+
+    /**
+     * Handles the physics updates for the game.
+     */
     public void onPhysicsUpdate() {
         checkDestroyedCount();
         setPhysicsToBall();
@@ -968,6 +1025,12 @@ public class Main extends Application implements EventHandler<KeyEvent>, GameEng
 
 
     @Override
+
+    /**
+     * Handles time-based updates in the game.
+     *
+     * @param time The current game time.
+     */
     public void onTime(long time) {
         this.time = time;
     }

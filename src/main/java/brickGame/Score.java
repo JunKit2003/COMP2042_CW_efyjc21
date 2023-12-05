@@ -5,8 +5,21 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 //import sun.plugin2.message.Message;
 
+
+/**
+ * The Score class is responsible for handling the display of scores and messages in the game.
+ * It provides methods to show scores, game messages, game over, and win messages on the game screen.
+ */
 public class Score {
 
+    /**
+     * Displays the score at a specified position on the game screen.
+     *
+     * @param x The x-coordinate for displaying the score.
+     * @param y The y-coordinate for displaying the score.
+     * @param score The score to be displayed.
+     * @param main The main game object that handles the game UI and scene.
+     */
     public void show(final double x, final double y, int score, final Main main) {
         String sign = (score >= 0) ? "+" : "";
         final Label label = new Label(sign + score);
@@ -32,6 +45,12 @@ public class Score {
         }).start();
     }
 
+    /**
+     * Displays a message on the game screen.
+     *
+     * @param message The message to be displayed.
+     * @param main The main game object that handles the game UI and scene.
+     */
     public void showMessage(String message, final Main main) {
         final Label label = new Label(message);
         label.setTranslateX(220);
@@ -56,6 +75,11 @@ public class Score {
         }).start();
     }
 
+    /**
+     * Displays a game over message on the game screen.
+     *
+     * @param main The main game object that handles the game UI and scene.
+     */
     public void showGameOver(final Main main) {
         Platform.runLater(() -> {
             Label label = new Label("Game Over :(");
@@ -73,6 +97,11 @@ public class Score {
         });
     }
 
+    /**
+     * Displays a win message on the game screen.
+     *
+     * @param main The main game object that handles the game UI and scene.
+     */
     public void showWin(final Main main) {
         Platform.runLater(() -> {
             Label label = new Label("You Win :)");

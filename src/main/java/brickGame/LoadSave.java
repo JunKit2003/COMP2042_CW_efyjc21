@@ -6,7 +6,15 @@ import java.io.IOException; // Importing necessary Java classes for I/O operatio
 import java.io.ObjectInputStream; // Importing necessary Java classes for I/O operations
 import java.util.ArrayList; // Importing necessary Java classes for I/O operations
 
+
+/**
+ * The LoadSave class is responsible for handling the loading and saving of game state.
+ * It includes various fields that represent different aspects of the game's current state,
+ * which can be serialized for saving or loaded from a saved state.
+ */
 public class LoadSave { // Class for handling loading and saving game states
+
+    /** Indicates if a heart block exists in the current game state. */
     public boolean isExistHeartBlock; // Boolean flag to indicate existence of a special block
     public boolean isGoldStatus; // Boolean flag for gold status
     public boolean isBigBall; // Boolean flag for gold status
@@ -25,11 +33,19 @@ public class LoadSave { // Class for handling loading and saving game states
     public boolean colideToBottomLeftCornerBlock; // Boolean flag for collision with bottom-left corner block
     public boolean colideToTopRightCornerBlock; // Boolean flag for collision with top-right corner block
     public boolean colideToBottomRightCornerBlock; // Boolean flag for collision with bottom-right corner block
+
+    /** The current level of the game. */
     public int level; // Integer for current game level
+
+    /** The current score of the player in the game. */
     public int score; // Integer for current score
     public int heart; // Integer for number of hearts or lives
     public int destroyedBlockCount; // Integer for count of destroyed blocks
+
+    /** The x-coordinate of the ball in the current game state. */
     public double xBall; // Double for ball's x-coordinate
+
+    /** The y-coordinate of the ball in the current game state. */
     public double yBall; // Double for ball's y-coordinate
     public double xBreak; // Double for break's x-coordinate
     public double yBreak; // Double for break's y-coordinate
@@ -39,6 +55,12 @@ public class LoadSave { // Class for handling loading and saving game states
     public double vX; // Double for velocity in x-direction
     public ArrayList<BlockSerializable> blocks = new ArrayList<BlockSerializable>(); // ArrayList to store serialized blocks
 
+
+
+    /**
+     * Reads the saved game state from a file and updates the game state accordingly.
+     * This method should handle all necessary deserialization logic to load the game state.
+     */
     public void read() {
         // Method to read and load the game state from a file
         try {

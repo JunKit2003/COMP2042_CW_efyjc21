@@ -8,13 +8,23 @@ import javafx.scene.shape.Rectangle;
 
 import java.io.Serializable;    // Importing necessary JavaFX and Java classes
 
+
+/**
+ * Represents a block in the brick game.
+ * This class encapsulates the properties and behaviors of a block such as its position, color, and type.
+ * It is used within the game to represent individual blocks that can be interacted with.
+ */
 public class Block implements Serializable {
     // Static instance for a default block
     private static Block block = new Block(-1, -1, Color.TRANSPARENT, 99);
 
 
     // Row and column positions of the block
+
+    /** The row position of the block in the game grid. */
     public int row;
+
+    /** The column position of the block in the game grid. */
     public int column;
 
     
@@ -23,17 +33,23 @@ public class Block implements Serializable {
 
     // Color of the block
     private Color color;
-    // Type of the block (e.g., for different block types in the game)
+
+    /** The type of the block, indicating its behavior or characteristics. */
     public int type;
 
-    // X and Y coordinates for positioning the block
+    /** The x-coordinate of the block's position. */
     public int x;
+
+    /** The y-coordinate of the block's position. */
     public int y;
 
     private int width = 100; // Default width of the block
     private int height = 30; // Default height of the block
     private int paddingTop = height * 2; // Padding at the top of the block
     private int paddingH = 50; // Horizontal padding
+
+    /** The graphical representation of the block as a rectangle. */
+
     public Rectangle rect; // Rectangle shape representing the block in the UI
 
     public static int NO_HIT = -1; // Constant representing no hit
@@ -54,7 +70,14 @@ public class Block implements Serializable {
     public static int BLOCK_GIANT = 103; // Constant for Giant block type
     public static int BLOCK_MINI = 104; // Constant for Giant block type
 
-    // Constructor for the Block class
+    /**
+     * Constructs a new Block instance.
+     *
+     * @param row The row position of the block in the game grid.
+     * @param column The column position of the block in the game grid.
+     * @param color The color of the block.
+     * @param type The type of the block, which may affect its behavior or interaction in the game.
+     */
     public Block(int row, int column, Color color, int type) { // Constructor for Block class, initializes the block with specified properties
         this.row = row; // Setting the block's row and column position
         this.column = column; // Setting the block's row and column position
@@ -103,7 +126,14 @@ public class Block implements Serializable {
 
     }
 
-   // Added ballRadius parameter for accurate collision detection with blocks
+    /**
+     * Checks if the ball has hit this block.
+     *
+     * @param xBall The x-coordinate of the ball.
+     * @param yBall The y-coordinate of the ball.
+     * @param ballRadius The radius of the ball.
+     * @return An integer representing the result of the hit check (the specific meaning should be defined based on game logic).
+     */
    public int checkHitToBlock(double xBall, double yBall, double ballRadius) {
     if (isDestroyed) {
         return NO_HIT; // Return NO_HIT if there is no collision

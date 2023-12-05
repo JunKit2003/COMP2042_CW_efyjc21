@@ -8,13 +8,26 @@ import javafx.scene.paint.ImagePattern;
 import javafx.scene.shape.Rectangle; 
 
 import java.io.Serializable; 
-import java.util.Random; 
+import java.util.Random;
 
+
+/**
+ * Represents a bonus item in the brick game.
+ * This class is responsible for the graphical representation and behavior of bonus items within the game.
+ * It includes details such as position, graphical elements, and time tracking for the bonus item.
+ */
 public class Bonus implements Serializable { // Class representing a bonus item in the game
+
+    /** The graphical representation of the bonus item as a rectangle shape. */
     public Rectangle choco; // Rectangle shape for the bonus item
 
+    /** The x-coordinate of the bonus item's position. */
     public double x; // Positional coordinate for the bonus item
+
+    /** The y-coordinate of the bonus item's position. */
     public double y; // Positional coordinate for the bonus item
+
+    /** The timestamp indicating when the bonus item was created. */
     public long timeCreated; // Time of creation or status of the bonus item
     public boolean taken = false; // Time of creation or status of the bonus item
 
@@ -45,6 +58,4 @@ public class Bonus implements Serializable { // Class representing a bonus item 
             Platform.runLater(() ->choco.setFill(new ImagePattern(new Image(url)))); // Set the image as the fill for the Rectangle
 
     }
-
-    // ... Remaining methods and class definition ...
 }
